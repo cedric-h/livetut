@@ -1,0 +1,23 @@
+{
+  "name": "leo",
+  "version": "1.0.0",
+  "description": "livecoding tutorial experiment",
+  "main": "index.js",
+  "scripts": {
+    "run": "tsc -p . && node out/index.js",
+    "watch": "nodemon -w ./src/ --exec \"npm run run\" --ext ts,json,html"
+  },
+  "keywords": [
+    "livecoding",
+    "tutorial"
+  ],
+  "author": "Cedric Hutchings",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^16.11.10"
+  }
+}
