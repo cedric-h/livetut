@@ -1,0 +1,10 @@
+{
+  "drawsetup": {},
+  "ground": {},
+  "player": {
+    "match": {
+      "regex": "fillRect(\s*canvas.height\s*-",
+      "error": "If canvas.height is the farthest you can go to the right ..."
+    }
+  }
+}

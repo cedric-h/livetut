@@ -1,0 +1,27 @@
+<html>
+
+  <head>
+    <title> Your Game! </title>
+  </head>
+
+  <body>
+    <script>
+      window.onload = () => {
+        /* -- begin drawsetup */
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        /* -- end drawsetup */
+        
+        /* -- begin ground */
+        ctx.fillRect(0, canvas.height/2, canvas.width, canvas.height/2);
+        /* -- end ground */
+        
+        /* -- begin player */
+        ctx.fillRect(10, 10, 20, 20);
+        /* -- end player */
+      };
+    </script>
+    <canvas id="canvas"></canvas>
+  </body>
+
+</html>

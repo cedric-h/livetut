@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "run": "tsc -p . && node out/index.js",
-    "watch": "nodemon -w ./src/ --exec \"npm run run\" --ext ts,json,html"
+    "watch": "nodemon -w ./src/ -w ./content/ -w ./pub/ --exec \"npm run run\" --ext ts,json,html,md"
   },
   "keywords": [
     "livecoding",
@@ -14,6 +14,7 @@
   "author": "Cedric Hutchings",
   "license": "MIT",
   "dependencies": {
+    "devextreme-showdown": "^1.0.1",
     "express": "^4.17.1"
   },
   "devDependencies": {

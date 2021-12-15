@@ -1,0 +1,29 @@
+{
+  "draw": {
+    "post": [
+      "(() => {",
+      "let err;",
+      "try { ",
+      "  if (",
+      "    !ctx",
+      "      .getImageData(0, 0, canvas.width, canvas.height)",
+      "      .data",
+      "      .some(x => x < 255)",
+      "  ) err = true;",
+      "} catch {",
+      "  window.addEventListener('load', () => {",
+      "    if (",
+      "      !document",
+      "        .getElementById('canvas')",
+      "        .getContext('2d')",
+      "        .getImageData(0, 0, canvas.width, canvas.height)",
+      "        .data",
+      "        .some(x => x < 255)",
+      "    ) throw new Error(`Draw something to your canvas!`);",
+      "  });",
+      "} ",
+      "if (err) throw new Error(`Draw something to your canvas!`);",
+      "})()"
+    ]
+  }
+}

@@ -2,25 +2,161 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ACE Editor Inside iframe</title>
+  <title>Hacktut: Live</title>
   <style type="text/css" media="screen">
-    body, html { 
-        height: 100%;
-        margin:0; padding:0;
-    }    
-    #editor { 
-        width: 100%; height: 50%;
-        margin: 0px;
+    body, html {
+      height: 100%;
+      font-family: monospace;
+      font-size: 20px;
+      color: snow;
+      margin: 0px; padding: 0px; border-width: 0px;
+      /* overflow: hidden; */
     }
+    #explasection {
+      background-color: grey;
+      width: 24em; height: 100%;
+      position: absolute;
+      top: 0px; left: 0px;
+      overflow-y: auto;
+    }
+    #explasection-title { padding: 0.8em; margin: 0s; }
+    #explasection-content { padding: 0.8em; }
+    #explasection-hr { width: 80%; margin: 0 auto; }
+    #explasection-next {
+      color: grey;
+      background-color: snow;
+      padding: 0.8em;
+      margin: 0 auto;
+      width: 3em;
+    }
+    #editor, #preview, #errors {
+      position: absolute;
+      height: 50%;
+      margin: 0px; padding: 0px; border-width: 0px;
+    }
+    #editor { top: 0%; left: 20em; width: calc(100% - 20em); }
+    #preview { top: 50%; left: 24em; width: calc((100% - 24em) / 2); }
+    #errors { top: 50%;  left: calc(24em + (100% - 24em) / 2);
+                        width: calc(       (100% - 24em) / 2 - 2em);
+                       height: calc(                     50% - 2em); }
+    #errors { padding: 1em; background-color: snow; color: red; overflow: wrap; }
   </style>
 </head>
 <body>
+  <div id="explasection">
+    <h2 id="explasection-title">Section Title</h2>
+    <hr id="explasection-hr"/>
+    <div id="explasection-content"></div>
+  </div>
   <pre id="editor"></pre>
+  <div id="errors"></div>
+  <iframe id="preview" sandbox="allow-popups-to-escape-sandbox allow-scripts allow-popups allow-forms allow-pointer-lock allow-top-navigation allow-modals allow-same-origin"></iframe>
   <script src="https://ajaxorg.github.io/ace-builds/src/ace.js"></script>
   <script>
-      var editor = ace.edit("editor");
-      editor.setTheme("ace/theme/twilight");
-      editor.session.setMode("ace/mode/html");
+    document.getElementById("editor").style.fontSize = '24px';
+    const editor = ace.edit("editor");
+    editor.setTheme("ace/theme/twilight");
+    editor.session.setMode("ace/mode/html");
+    editor.session.setTabSize(2);
+
+    const preview = document.getElementById("preview");
+    const errors = document.getElementById("errors");
+    editor.on("change", () => {
+      const srcdoc = document.implementation.createHTMLDocument("");
+      srcdoc.children[0].innerHTML = editor.getValue();
+
+      errors.innerHTML = "";
+
+      for (const script of srcdoc.getElementsByTagName("script"))
+        script.innerHTML = "window.onerror = e => window.parent.postMessage(e,'*');\n" +
+          script.innerHTML;
+
+      preview.srcdoc = srcdoc.children[0].innerHTML;
+
+      preview.onload = _ => setTimeout(addNextIfDone, 10);
+    });
+
+    window.addEventListener("message", e => errors.appendChild(document.createTextNode(e.data)));
+    window.onerror = e => errors.appendChild(document.createTextNode(e + ""));
+
+    let stepIndex = 1;
+    let stepWinConditions;
+
+    function addNextIfDone() {
+      if (errors.innerHTML != "") return;
+      if (document.getElementById("explasection-next")) return;
+
+      const lines = editor.getValue().split('\n').map(x => x.trim());
+      const sections = new Map();
+      let open;
+      let openLines = [];
+      for (const line of lines) {
+        const match = line.match(/^\t*\/\* -- (begin|end) ([a-z]*) \*\//);
+        if (!match) {
+          if (open) openLines.push(line);
+          continue;
+        };
+
+        const [, delim, name] = match;
+        if ((open && delim == "begin") || (!open && delim == "end"))
+          throw new Error(`Unexpected ${delim} anchor comment`);
+        if (open && name != open)
+          throw new Error(`Expected "end ${open}" found "end ${name}"`);
+
+        if (delim == "begin")
+          open = name;
+        else {
+          sections.set(open, openLines);
+          openLines = [];
+          open = undefined;
+        }
+      }
+      for (const k in stepWinConditions)
+        if (!sections.has(k))
+          throw new Error(`Expected anchor comment ${k}, not found.`);
+      for (const k in sections.keys())
+        if (!stepWinConditions.hasOwnProperty(k))
+          throw new Error(`Found unexpected anchor comment ${k}`);
+
+      for (let [k, lines] of sections) {
+        const win = stepWinConditions[k];
+        lines = [...(win.pre ?? []), ...lines, ...(win.post ?? [])];
+        if (win.match && !new RegExp(win.match.regex).test(lines.join('\n')))
+          throw new Error(win.match.error);
+        new Function(lines.join('\n'))();
+      }
+      
+      const expl = document.getElementById("explasection");
+      expl.appendChild((() => {
+        const next = document.createElement('div');
+        next.innerText = "NEXT!";
+        next.id = "explasection-next";
+        next.onclick = async () => await loadStep(), stepIndex++;
+        return next;
+      })());
+
+      expl.scrollTop = expl.scrollHeight - expl.clientHeight;
+    };
+
+    const content = document.getElementById("explasection-content");
+    const title = document.getElementById("explasection-title");
+    /* todo: could prolly roll these up into 1 request */
+    async function loadStep() {
+      const res = Object.fromEntries(await Promise.all(
+        ["title", "explanation", "example", "winConditions"].map(k => {
+          return fetch(`${window.location.href}${k}/${stepIndex}`)
+            .then(async x => [k, await x.text()]);
+         })
+      ));
+      title.innerHTML = res.title;
+      content.innerHTML = res.explanation;
+      editor.setValue(res.example);
+      stepWinConditions = JSON.parse(res.winConditions);
+
+      const next = document.getElementById('explasection-next');
+      if (next) next.remove();
+    };
+    loadStep().then(addNextIfDone)
   </script>
 </body>
 </html>
